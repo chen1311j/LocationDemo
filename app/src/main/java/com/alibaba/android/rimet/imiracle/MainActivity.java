@@ -102,13 +102,16 @@ public class MainActivity extends Activity {
             AMapLocationClient.updatePrivacyShow(DemoApplication.getDemoApplication(), true, true);
             AMapLocationClient.updatePrivacyAgree(DemoApplication.getDemoApplication(), true);
             GDLocationUtils.getInstance().initGDMap(aMapLocation -> {
+                GDLocationUtils.getInstance().stopLocation();
                 if(aMapLocation == null) return;
                 if (aMapLocation.getErrorCode() == 0) {
                     //解析定位结果
                     StringBuilder locationBuilder = new StringBuilder();
                     locationBuilder.append("(Gaode)\nlongitude = ").append(BDLocationUtils.parseDouble(aMapLocation.getLongitude())).append(",\n\n latitude =").append(BDLocationUtils.parseDouble(aMapLocation.getLatitude()));
                     tv_location.setText(locationBuilder.toString());
+                    return;
                 }
+                Toast.makeText(this, aMapLocation.getErrorInfo(), Toast.LENGTH_SHORT).show();
             });
         } catch (Exception e) {
             throw new RuntimeException(e);
