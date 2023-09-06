@@ -88,6 +88,7 @@ public class MainActivity extends Activity {
                     StringBuilder locationBuilder = new StringBuilder();
                     locationBuilder.append("(Baidu)\nlongitude = ").append(BDLocationUtils.parseDouble(bdLocation.getLongitude())).append(",\n\n latitude =").append(BDLocationUtils.parseDouble(bdLocation.getLatitude()));
                     tv_location.setText(locationBuilder.toString());
+                    BDLocationUtils.getInstance().stopLocation();
                 }
             });
         } catch (Exception e) {

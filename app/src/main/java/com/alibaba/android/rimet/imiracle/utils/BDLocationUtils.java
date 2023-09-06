@@ -14,6 +14,7 @@ import java.text.NumberFormat;
 public class BDLocationUtils {
 
     private static BDLocationUtils instance;
+    private LocationClient locationClient;
 
     public static BDLocationUtils getInstance(){
         if(instance == null){
@@ -30,12 +31,8 @@ public class BDLocationUtils {
      * 初始化定位参数配置
      */
     public void initLocationOption(BDAbstractLocationListener listener) throws Exception {
-        //定位服务的客户端。宿主程序在客户端声明此类，并调用，目前只支持在主线程中启动
-        LocationClient locationClient = new LocationClient(DemoApplication.getDemoApplication());
         //声明LocationClient类实例并配置定位参数
         LocationClientOption locationOption = new LocationClientOption();
-        //注册监听函数
-        locationClient.registerLocationListener(listener);
         //可选，默认高精度，设置定位模式，高精度，低功耗，仅设备
         locationOption.setLocationMode(LocationClientOption.LocationMode.Hight_Accuracy);
         //可选，默认gcj02，设置返回的定位结果坐标系，如果配合百度地图使用，建议设置为bd09ll;
@@ -66,10 +63,22 @@ public class BDLocationUtils {
         locationOption.setOpenAutoNotifyMode();
         //设置打开自动回调位置模式，该开关打开后，期间只要定位SDK检测到位置变化就会主动回调给开发者
         locationOption.setOpenAutoNotifyMode(3000, 1, LocationClientOption.LOC_SENSITIVITY_HIGHT);
+        if(locationClient == null){
+            //定位服务的客户端。宿主程序在客户端声明此类，并调用，目前只支持在主线程中启动
+            locationClient = new LocationClient(DemoApplication.getDemoApplication());
+        }
         //需将配置好的LocationClientOption对象，通过setLocOption方法传递给LocationClient对象使用
         locationClient.setLocOption(locationOption);
+        //注册监听函数
+        locationClient.registerLocationListener(listener);
         //开始定位
         locationClient.start();
+    }
+
+    public void stopLocation(){
+        if(locationClient != null){
+            locationClient.stop();
+        }
     }
 
     public static String parseDouble(double number){
