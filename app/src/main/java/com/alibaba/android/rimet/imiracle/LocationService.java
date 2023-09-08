@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.*;
 import android.os.IBinder;
+import android.text.TextUtils;
 import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
@@ -18,7 +19,7 @@ public class LocationService extends Service {
     public static String LOCATION_CACHE_KEY = "location_cache_key";
 
     private LocationManager manager;
-    private GpsStatus.Listener listener;
+    private OnNmeaMessageListener listener;
 
     @Override
     public void onCreate() {
@@ -27,43 +28,6 @@ public class LocationService extends Service {
             return;
         }
         manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        // 状态监听
-        listener = event -> {
-            switch (event) {
-                // 第一次定位
-                case GpsStatus.GPS_EVENT_FIRST_FIX:
-                    Log.i("tag", "第一次定位");
-                    break;
-                // 卫星状态改变
-                case GpsStatus.GPS_EVENT_SATELLITE_STATUS:
-                    Log.i("tag", "卫星状态改变");
-                    // 获取当前状态
-                    GpsStatus gpsStatus = manager.getGpsStatus(null);
-                    // 获取卫星颗数的默认最大值
-                    int maxSatellites = gpsStatus.getMaxSatellites();
-                    // 创建一个迭代器保存所有卫星
-                    Iterator<GpsSatellite> iters = gpsStatus.getSatellites().iterator();
-                    int count = 0;
-                    while (iters.hasNext() && count <= maxSatellites) {
-                        GpsSatellite s = iters.next();
-                        count++;
-                    }
-                    GPSInfo gpsInfo = SharePreferenceUtils.getByClass(this, LOCATION_CACHE_KEY, GPSInfo.class);
-                    if(gpsInfo == null) gpsInfo = new GPSInfo();
-                    gpsInfo.setMaxSatellites(count);
-                    SharePreferenceUtils.putByClass(this, LOCATION_CACHE_KEY, gpsInfo);
-                    break;
-                // 定位启动
-                case GpsStatus.GPS_EVENT_STARTED:
-                    Log.i("tag", "定位启动");
-                    break;
-                // 定位结束
-                case GpsStatus.GPS_EVENT_STOPPED:
-                    Log.i("tag", "定位结束");
-                    break;
-            }
-        };
-        manager.addGpsStatusListener(listener);
         String bestProvider = manager.getBestProvider(getCriteria(), true);
         Log.i("tag", "beseProvider = ====>" + bestProvider);
         Location lastKnownLocation = manager.getLastKnownLocation(bestProvider);
@@ -76,6 +40,56 @@ public class LocationService extends Service {
             return;
         }
 
+        listener = (message, timestamp) -> {
+            Log.i("cj", "原始信息---->"+message);
+            if(TextUtils.isEmpty(message)) return;
+            if(!message.contains("GGA")) return;
+            String info[] = message.split(",");
+            if(info == null){
+                Log.i("cj", "定位信息为空");
+                return;
+            }
+            Log.i("cj","定位类型："+info[0]);
+            Log.i("cj","UTC时间："+info[1]);
+
+            Log.i("cj","原始纬度："+info[2]);
+            double parsedLatitude = parseGPSInfo(info[2]);
+            Log.i("cj","转换纬度："+parsedLatitude);
+            Log.i("cj","纬度半球："+info[3]);
+            Log.i("cj","原始经度："+info[4]);
+            double parseLongitude = parseGPSInfo(info[4]);
+            Log.i("cj","转换经度："+ parseLongitude);
+            Log.i("cj","经度半球："+info[5]);
+            Log.i("cj","GPS状态："+info[6]);
+            Log.i("cj","使用卫星数量："+info[7]);
+            Log.i("cj","HDOP-水平精度因子："+info[8]);
+            Log.i("cj","椭球高："+info[9]);
+            Log.i("cj","大地水准面高度异常差值："+info[10]);
+            Log.i("cj","差分GPS数据期限："+info[11]);
+            Log.i("cj","差分参考基站标号："+info[12]);
+            Log.i("cj","ASCII码的异或校验："+info[info.length-1]);
+            //UTC + (＋0800) = 本地（北京）时间
+            int a= Integer.parseInt(info[1].substring(0,2));
+            a+=8;
+            a%=24;
+            String time="";
+            String time1="";
+            if(a<10){
+                time="0"+a+info[1].substring(2,info[1].length()-1);
+            }
+            else{
+                time=a+info[1].substring(2,info[1].length()-1);
+            }
+            time1=time.substring(0,2)+":"+time.substring(2,4)+":"+time.substring(4,6);
+            Log.i("cj", "北京时间："+time1);
+            GPSInfo gpsInfo = SharePreferenceUtils.getByClass(this, LOCATION_CACHE_KEY, GPSInfo.class);
+            if(gpsInfo == null) gpsInfo = new GPSInfo();
+            gpsInfo.setMaxSatellites(info[7]);
+            gpsInfo.setLatitude(parsedLatitude);
+            gpsInfo.setLongitude(parseLongitude);
+            SharePreferenceUtils.putByClass(this, LOCATION_CACHE_KEY, gpsInfo);
+        };
+        manager.addNmeaListener(listener);
         manager.requestLocationUpdates(bestProvider, 0, 0, location -> {
             Log.i("tag", "location changed====>"+location);
             if(location == null) return;
@@ -110,11 +124,25 @@ public class LocationService extends Service {
         return  criteria;
     }
 
+    /**
+     * 计算依据：abcde.fghi
+     * @param str abc + (de/60) + (fghi)/600000
+     */
+    private double parseGPSInfo(String str){
+        if(TextUtils.isEmpty(str)) return 0;
+        try{
+            double number = Double.parseDouble(str);
+            return ((int)number/100)+(number%100)/60;
+        }catch (NumberFormatException e){
+            return 0;
+        }
+    }
+
     @Override
     public void onDestroy() {
         super.onDestroy();
         if(manager != null && listener != null){
-            manager.removeGpsStatusListener(listener);
+            manager.removeNmeaListener(listener);
         }
     }
 }

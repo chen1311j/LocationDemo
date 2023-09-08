@@ -3,7 +3,7 @@ package com.alibaba.android.rimet.imiracle;
 public class GPSInfo {
 
     private String provider;//定位方式
-    private int MaxSatellites;//搜索的的卫星数量
+    private String MaxSatellites;//搜索的的卫星数量
 
     private double longitude;//经度
     private double latitude;//纬度
@@ -17,11 +17,11 @@ public class GPSInfo {
         this.provider = provider;
     }
 
-    public int getMaxSatellites() {
+    public String getMaxSatellites() {
         return MaxSatellites;
     }
 
-    public void setMaxSatellites(int maxSatellites) {
+    public void setMaxSatellites(String maxSatellites) {
         MaxSatellites = maxSatellites;
     }
 
@@ -59,6 +59,10 @@ public class GPSInfo {
                 ", longitude=" + longitude +
                 ", latitude=" + latitude +
                 '}';
+    }
+
+    public String getLocaionInfo(){
+        return "(System)\nlongitude = "+longitude+"\n\nlatitude = "+latitude;
     }
 
     public boolean isAvailable(){

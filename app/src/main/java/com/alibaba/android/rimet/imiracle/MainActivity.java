@@ -87,6 +87,7 @@ public class MainActivity extends Activity {
                 public void onReceiveLocation(BDLocation bdLocation) {
                     StringBuilder locationBuilder = new StringBuilder();
                     locationBuilder.append("(Baidu)\nlongitude = ").append(BDLocationUtils.parseDouble(bdLocation.getLongitude())).append(",\n\n latitude =").append(BDLocationUtils.parseDouble(bdLocation.getLatitude()));
+                    locationBuilder.append("\n\n可靠度 = "+bdLocation.getMockGnssProbability());
                     tv_location.setText(locationBuilder.toString());
                     BDLocationUtils.getInstance().stopLocation();
                 }
@@ -108,6 +109,7 @@ public class MainActivity extends Activity {
                     //解析定位结果
                     StringBuilder locationBuilder = new StringBuilder();
                     locationBuilder.append("(Gaode)\nlongitude = ").append(BDLocationUtils.parseDouble(aMapLocation.getLongitude())).append(",\n\n latitude =").append(BDLocationUtils.parseDouble(aMapLocation.getLatitude()));
+                    locationBuilder.append("\n\n可靠度 = "+aMapLocation.getTrustedLevel());
                     tv_location.setText(locationBuilder.toString());
                     return;
                 }
@@ -132,7 +134,7 @@ public class MainActivity extends Activity {
         }
         GPSInfo gpsInfo = SharePreferenceUtils.getByClass(this, LocationService.LOCATION_CACHE_KEY, GPSInfo.class);
         if(gpsInfo != null && gpsInfo.isAvailable()){
-            tv_location.setText(gpsInfo.toString());
+            tv_location.setText(gpsInfo.getLocaionInfo());
             gpsInfo.setExpired(true);
             return;
         }
@@ -141,7 +143,7 @@ public class MainActivity extends Activity {
             lastKnownLocation = manager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER);
         }
         if(lastKnownLocation == null){
-            tv_location.setText(gpsInfo != null && gpsInfo.isAvailable()?"获取失败，过期定位："+gpsInfo.toString():"获取失败");
+            tv_location.setText(gpsInfo != null && gpsInfo.isAvailable()?"获取失败，过期定位："+gpsInfo.getLocaionInfo():"获取失败");
             return;
         }
         StringBuilder locationBuilder = new StringBuilder();
