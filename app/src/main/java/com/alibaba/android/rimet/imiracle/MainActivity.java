@@ -11,6 +11,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
@@ -26,6 +27,15 @@ import com.alibaba.android.rimet.imiracle.utils.SharePreferenceUtils;
 import com.amap.api.location.AMapLocation;
 import com.amap.api.location.AMapLocationClient;
 import com.amap.api.location.AMapLocationListener;
+import com.amap.api.location.CoordinateConverter;
+import com.amap.api.location.DPoint;
+import com.amap.api.services.core.AMapException;
+import com.amap.api.services.core.LatLonPoint;
+import com.amap.api.services.geocoder.GeocodeResult;
+import com.amap.api.services.geocoder.GeocodeSearch;
+import com.amap.api.services.geocoder.RegeocodeAddress;
+import com.amap.api.services.geocoder.RegeocodeQuery;
+import com.amap.api.services.geocoder.RegeocodeResult;
 import com.baidu.location.BDAbstractLocationListener;
 import com.baidu.location.BDLocation;
 import com.baidu.location.LocationClient;
@@ -90,11 +100,37 @@ public class MainActivity extends Activity {
                     locationBuilder.append("\n\n可靠度 = "+bdLocation.getMockGnssProbability());
                     tv_location.setText(locationBuilder.toString());
                     BDLocationUtils.getInstance().stopLocation();
+                    getLocationDetail(bdLocation.getLatitude(), bdLocation.getLongitude());
                 }
             });
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void getLocationDetail(double latitude, double longitude) {
+        try {
+            GeocodeSearch search = new GeocodeSearch(this);
+            LatLonPoint point = new LatLonPoint(latitude, longitude);
+            RegeocodeQuery query = new RegeocodeQuery(point, 100, GeocodeSearch.GPS);
+            search.setOnGeocodeSearchListener(new GeocodeSearch.OnGeocodeSearchListener() {
+                @Override
+                public void onRegeocodeSearched(RegeocodeResult regeocodeResult, int i) {
+                    Log.i("tag", "code ===> "+i);
+                    RegeocodeAddress address = regeocodeResult.getRegeocodeAddress();
+                    String res = tv_location.getText().toString();
+                    tv_location.setText(res+"\n\n详细地址："+address.getProvince()+address.getCity()+address.getFormatAddress());
+                }
+
+                @Override
+                public void onGeocodeSearched(GeocodeResult geocodeResult, int i) {
+                }
+            });
+            search.getFromLocationAsyn(query);
+        } catch (AMapException e) {
+            Log.e("tag", "error ----> "+e.getMessage());
+        }
+
     }
 
     private void getGDLocation(){
@@ -111,6 +147,7 @@ public class MainActivity extends Activity {
                     locationBuilder.append("(Gaode)\nlongitude = ").append(BDLocationUtils.parseDouble(aMapLocation.getLongitude())).append(",\n\n latitude =").append(BDLocationUtils.parseDouble(aMapLocation.getLatitude()));
                     locationBuilder.append("\n\n可靠度 = "+aMapLocation.getTrustedLevel());
                     tv_location.setText(locationBuilder.toString());
+                    getLocationDetail(aMapLocation.getLatitude(), aMapLocation.getLongitude());
                     return;
                 }
                 Toast.makeText(this, aMapLocation.getErrorInfo(), Toast.LENGTH_SHORT).show();
@@ -136,6 +173,7 @@ public class MainActivity extends Activity {
         if(gpsInfo != null && gpsInfo.isAvailable()){
             tv_location.setText(gpsInfo.getLocaionInfo());
             gpsInfo.setExpired(true);
+            getLocationDetail(gpsInfo.getLatitude(), gpsInfo.getLongitude());
             return;
         }
         Location lastKnownLocation = manager.getLastKnownLocation(LocationManager.FUSED_PROVIDER);
